@@ -1,0 +1,50 @@
+# =========================
+# 🔐 Force HTTPS (IMPORTANT)
+# =========================
+RewriteEngine On
+RewriteCond %{HTTPS} off
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# =========================
+# 🔐 Disable directory listing
+# =========================
+Options -Indexes
+
+# =========================
+# 🔐 Protect sensitive files
+# =========================
+<FilesMatch "\.(env|ini|log|sh|sql)$">
+    Require all denied
+</FilesMatch>
+
+# =========================
+# 🔐 Block hidden files (.env, .git, etc.)
+# =========================
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>
+
+# =========================
+# 🔐 Block includes folder access
+# =========================
+RewriteRule ^includes/ - [F,L]
+
+# =========================
+# 🔐 Allow API (IMPORTANT)
+# =========================
+RewriteRule ^api/ - [L]
+
+# =========================
+# 🔐 Block PHP execution in uploads
+# =========================
+RewriteRule ^uploads/.*\.php$ - [F,L]
+
+# =========================
+# 🛡️ Security Headers
+# =========================
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>

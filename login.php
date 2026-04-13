@@ -1,0 +1,236 @@
+<?php require_once "includes/security.php"; ?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Login - BuildSmart AI</title>
+
+<meta name="description" content="Secure login for BuildSmart AI - AI-powered construction assistant platform.">
+<meta name="robots" content="index, follow">
+
+<style>
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #f5f7fa;
+}
+
+/* Header */
+header {
+    background: #007bff;
+    color: white;
+    padding: 15px;
+    text-align: center;
+}
+
+header img {
+    height:30px;
+    vertical-align:middle;
+    margin-right:10px;
+}
+
+header a {
+    color: white;
+    margin: 0 10px;
+    text-decoration: none;
+}
+
+/* Container */
+.login-container {
+    width: 90%;
+    max-width: 400px;
+    margin: 50px auto;
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0px 5px 15px rgba(0,0,0,0.1);
+    text-align: center;
+}
+
+h2 { margin-bottom: 10px; }
+
+p.desc {
+    font-size: 14px;
+    color: #555;
+    margin-bottom: 15px;
+}
+
+p.trust {
+    font-size: 13px;
+    color: #666;
+    margin-bottom: 15px;
+}
+
+input {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+}
+
+button {
+    width: 100%;
+    padding: 12px;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+button:hover { background: #0056b3; }
+
+#message {
+    margin-top: 10px;
+    color: red;
+}
+
+#otpBox {
+    display: none;
+    margin-top: 20px;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <h1>
+        <img src="assets/logo.png" alt="BuildSmart AI Logo">
+        BuildSmart AI
+    </h1>
+
+    <div>
+        <a href="index.php">Home</a>
+        <a href="about.php">About</a>
+        <a href="contact.php">Contact</a>
+    </div>
+</header>
+
+<div class="login-container">
+
+    <h2>🔐 Login</h2>
+
+    <p class="desc">
+        Secure login to access your AI-powered construction assistant.
+    </p>
+
+    <p class="trust">
+        This is a legitimate platform. We do NOT request banking or financial information.
+    </p>
+
+    <form id="loginForm">
+        <input type="email" name="email" placeholder="Email" required>
+        <input type="password" name="password" placeholder="Password" required>
+        <input type="hidden" name="csrf_token" id="csrf_token">
+        <button type="submit">Login</button>
+    </form>
+
+    <p style="margin-top:10px;">
+        New user? <a href="register.php">Create an account</a>
+    </p>
+
+    <div id="message"></div>
+
+    <div id="otpBox">
+        <h3>Enter OTP</h3>
+        <input type="text" id="otp" placeholder="Enter OTP">
+        <button onclick="verifyOTP()">Verify</button>
+        <div id="otpMessage"></div>
+    </div>
+
+</div>
+
+<footer style="text-align:center; padding:20px; font-size:13px; color:#555;">
+    <p>© 2026 BuildSmart AI</p>
+    <p>
+        <a href="about.php">About</a> |
+        <a href="contact.php">Contact</a> |
+        <a href="privacy.php">Privacy</a> |
+        <a href="terms.php">Terms</a>
+    </p>
+</footer>
+
+<script>
+
+let csrfToken = "";
+
+/* =========================
+   SAFE CSRF LOADING
+========================= */
+async function loadCSRF(){
+    try {
+        const res = await fetch('includes/get_csrf.php');
+        const data = await res.json();
+
+        csrfToken = data.token;
+        document.getElementById('csrf_token').value = csrfToken;
+
+    } catch (e) {
+        document.getElementById("message").innerText = "Security load failed. Refresh page.";
+    }
+}
+
+loadCSRF();
+
+/* =========================
+   LOGIN
+========================= */
+document.getElementById('loginForm').onsubmit = async function(e){
+    e.preventDefault();
+
+    const formData = new FormData(this);
+
+    try {
+        const res = await fetch('api/login.php', {
+            method: 'POST',
+            body: formData
+        });
+
+        const text = await res.text();
+        const data = JSON.parse(text);
+
+        if(data.otp_required){
+            document.getElementById("otpBox").style.display = "block";
+            document.getElementById("otpMessage").innerText = "OTP sent to email";
+        } else {
+            document.getElementById("message").innerText = data.error || "Login failed";
+        }
+
+    } catch (e) {
+        document.getElementById("message").innerText = "Server error or invalid response";
+    }
+};
+
+/* =========================
+   OTP VERIFY
+========================= */
+function verifyOTP(){
+    let otp = document.getElementById("otp").value;
+
+    fetch('api/verify_otp.php', {
+        method: 'POST',
+        headers: {"Content-Type":"application/x-www-form-urlencoded"},
+        body: "otp="+encodeURIComponent(otp)+"&csrf_token="+csrfToken
+    })
+    .then(res => res.json())
+    .then(data => {
+        if(data.success){
+            localStorage.setItem("jwt", data.token);
+            window.location.href = "index.php";
+        } else {
+            document.getElementById("otpMessage").innerText = data.error;
+        }
+    })
+    .catch(() => {
+        document.getElementById("otpMessage").innerText = "Network error";
+    });
+}
+
+</script>
+
+</body>
+</html>
